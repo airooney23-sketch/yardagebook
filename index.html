@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>야디지북</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  body {
+    background:#111;
+    font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+    min-height:100vh;
+  }
+
+  /* ── 메인 헤더 ── */
+  .main-header {
+    background:#1a2e1a;
+    border-bottom:2px solid #4a9e3f;
+    padding:12px 16px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    position:sticky;
+    top:0;
+    z-index:10;
+    gap:8px;
+  }
+  .main-header h1 {
+    color:#f5f0e8;
+    font-size:16px;
+    font-weight:700;
+    letter-spacing:1px;
+    flex:1;
+    min-width:0;
+  }
+  .header-btns { display:flex; gap:8px; flex-shrink:0; }
+  .btn-add-course {
+    background:#4a9e3f;
+    color:#fff;
+    border:none;
+    padding:8px 16px;
+    border-radius:8px;
+    font-size:14px;
+    font-weight:700;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .btn-settings {
+    background:rgba(255,255,255,.08);
+    border:none;
+    color:#f0f0f0;
+    width:36px;
+    height:36px;
+    border-radius:8px;
+    font-size:16px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+  }
+
+  /* ── 골프장 목록 ── */
+  .course-list {
+    padding:16px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+
+  .empty-msg {
+    text-align:center;
+    color:#4a9e3f;
+    opacity:.5;
+    padding:80px 20px;
+    font-size:14px;
+    line-height:2;
+  }
+  .empty-msg .icon { font-size:48px; display:block; margin-bottom:8px; }
+
+  .course-item {
+    background:#1e1e1e;
+    border:1px solid #2a2a2a;
+    border-radius:10px;
+    overflow:hidden;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:12px 14px;
+    transition:background .15s;
+  }
+  .course-item:active { background:#252525; }
+
+  .course-thumb {
+    width:52px;
+    height:52px;
+    border-radius:7px;
+    object-fit:cover;
+    flex-shrink:0;
+    background:#2a2a2a;
+  }
+  .course-thumb-empty {
+    width:52px;
+    height:52px;
+    border-radius:7px;
+    background:#2a2a2a;
+    flex-shrink:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:22px;
+  }
+
+  .course-info { flex:1; min-width:0; }
+  .course-name {
+    color:#f0f0f0;
+    font-size:15px;
+    font-weight:700;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .course-count {
+    color:#666;
+    font-size:12px;
+    margin-top:3px;
+  }
+  .course-arrow { color:#4a9e3f; font-size:20px; }
+
+  /* ══ 뷰어 (전체화면) ══ */
+  .viewer {
+    position:fixed;
+    inset:0;
+    background:#000;
+    z-index:100;
+    display:none;
+    flex-direction:column;
+  }
+  .viewer.open { display:flex; }
+
+  .viewer-header {
+    background:#1a2e1a;
+    border-bottom:2px solid #4a9e3f;
+    padding:10px 12px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-shrink:0;
+  }
+  .vh-back {
+    background:rgba(255,255,255,.1);
+    border:none;
+    color:#fff;
+    font-size:18px;
+    width:34px;
+    height:34px;
+    border-radius:7px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+  }
+  .vh-name {
+    color:#f5f0e8;
+    font-size:14px;
+    font-weight:700;
+    flex:1;
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .vh-upload {
+    background:#4a9e3f;
+    border:none;
+    color:#fff;
+    font-size:13px;
+    font-weight:700;
+    padding:7px 12px;
+    border-radius:7px;
+    cursor:pointer;
+    flex-shrink:0;
+    white-space:nowrap;
+  }
+  .vh-upload:disabled { opacity:.5; cursor:default; }
+  .vh-del {
+    background:rgba(200,50,50,.15);
+    border:1px solid rgba(200,50,50,.3);
+    color:#ff7070;
+    font-size:13px;
+    width:34px;
+    height:34px;
+    border-radius:7px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+  }
+
+  /* 업로드 진행 상태 바 */
+  .upload-status {
+    display:none;
+    background:#0d1a10;
+    border-bottom:1px solid #1e3a22;
+    color:#4a9e3f;
+    font-size:12px;
+    text-align:center;
+    padding:7px;
+    flex-shrink:0;
+  }
+  .upload-status.show { display:block; }
+
+  /* 사진 스크롤 영역 */
+  .viewer-scroll {
+    flex:1;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  /* 각 사진: 원본 비율 그대로, 화면 너비에 맞춤 */
+  .photo-block {
+    width:100%;
+    position:relative;
+    border-bottom:3px solid #1a1a1a;
+  }
+  .photo-block img {
+    width:100%;
+    height:auto;
+    display:block;
+  }
+  /* 삭제 버튼 (사진 위 우상단) */
+  .photo-del {
+    position:absolute;
+    top:8px;
+    right:8px;
+    background:rgba(0,0,0,.55);
+    border:1px solid rgba(255,255,255,.2);
+    color:#fff;
+    font-size:12px;
+    padding:4px 8px;
+    border-radius:5px;
+    cursor:pointer;
+    backdrop-filter:blur(4px);
+  }
+
+  /* 사진 없을 때 */
+  .viewer-empty {
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    color:#4a9e3f;
+    opacity:.5;
+    gap:12px;
+  }
+  .viewer-empty .icon { font-size:52px; }
+  .viewer-empty p { font-size:14px; text-align:center; line-height:1.7; }
+
+  /* ── 하단 시트 공통 ── */
+  .sheet-back {
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.65);
+    z-index:200;
+    align-items:flex-end;
+    justify-content:center;
+  }
+  .sheet-back.open { display:flex; }
+  .sheet {
+    background:#1e1e1e;
+    border-radius:18px 18px 0 0;
+    width:100%;
+    max-width:600px;
+    max-height:88vh;
+    overflow-y:auto;
+    padding:24px 20px 44px;
+    animation:up .2s ease;
+  }
+  @keyframes up { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
+  .sheet h2 { color:#f0f0f0; font-size:16px; font-weight:700; margin-bottom:16px; }
+  .sheet input {
+    width:100%;
+    background:#2a2a2a;
+    border:2px solid #333;
+    border-radius:9px;
+    padding:12px 14px;
+    color:#f0f0f0;
+    font-size:15px;
+    outline:none;
+  }
+  .sheet input:focus { border-color:#4a9e3f; }
+  .sheet-actions { display:flex; gap:10px; margin-top:16px; }
+  .sh-cancel {
+    flex:1;
+    background:none;
+    border:1px solid #444;
+    color:#888;
+    padding:12px;
+    border-radius:9px;
+    font-size:14px;
+    cursor:pointer;
+  }
+  .sh-ok {
+    flex:2;
+    background:#4a9e3f;
+    border:none;
+    color:#fff;
+    padding:12px;
+    border-radius:9px;
+    font-size:14px;
+    font-weight:700;
+    cursor:pointer;
+  }
+
+  /* ── 설정 시트 전용 ── */
+  .settings-box {
+    background:#0d1a10;
+    border:1px solid #1e3a22;
+    border-radius:10px;
+    padding:12px 14px;
+    margin-bottom:14px;
+  }
+  .settings-box .st-title { font-size:12px; color:#4a9e3f; font-weight:700; margin-bottom:8px; }
+  .settings-box .st-desc { font-size:11px; color:#aaa; line-height:1.7; margin-bottom:10px; }
+  .settings-box .st-steps {
+    font-size:10px; color:#5a8a55; background:#060f08;
+    border-radius:6px; padding:8px; line-height:1.8;
+  }
+  .field-label { font-size:11px; color:#888; margin-bottom:4px; }
+  .field-input {
+    width:100%;
+    background:#070707;
+    border:1px solid #2a2a2a;
+    border-radius:7px;
+    color:#fff;
+    font-size:13px;
+    padding:10px 12px;
+    margin-bottom:12px;
+    outline:none;
+  }
+  .field-input:focus { border-color:#4a9e3f; }
+  .cld-status-txt { text-align:center; font-size:12px; color:#666; margin-top:4px; }
+  .cld-status-txt.ok { color:#4a9e3f; }
+</style>
+</head>
+<body>
+
+<!-- 메인 헤더 -->
+<div class="main-header">
+  <h1>⛳ 야디지북</h1>
+  <div class="header-btns">
+    <button class="btn-settings" onclick="openSettings()" title="설정">⚙️</button>
+    <button class="btn-add-course" onclick="openAddCourse()">+ 골프장 추가</button>
+  </div>
+</div>
+
+<!-- 골프장 목록 -->
+<div class="course-list" id="courseList">
+  <div class="empty-msg" id="emptyMsg">
+    <span class="icon">⛳</span>
+    골프장을 추가해서<br>야디지를 관리하세요
+  </div>
+</div>
+
+<!-- 뷰어 -->
+<div class="viewer" id="viewer">
+  <div class="viewer-header">
+    <button class="vh-back" onclick="closeViewer()">←</button>
+    <span class="vh-name" id="viewerName"></span>
+    <button class="vh-upload" id="vhUploadBtn" onclick="triggerUpload()">+ 사진 추가</button>
+    <button class="vh-del" onclick="deleteCourse()" title="골프장 삭제">🗑</button>
+  </div>
+  <div class="upload-status" id="uploadStatus"></div>
+  <div class="viewer-scroll" id="viewerScroll"></div>
+</div>
+
+<!-- 파일 입력 -->
+<input type="file" id="fileInput" accept="image/*" multiple style="display:none" onchange="onFilesSelected(this)">
+
+<!-- 골프장 추가 시트 -->
+<div class="sheet-back" id="addSheet">
+  <div class="sheet">
+    <h2>골프장 이름</h2>
+    <input id="courseNameInput" placeholder="예: 이글몬트CC" maxlength="30">
+    <div class="sheet-actions">
+      <button class="sh-cancel" onclick="closeAddCourse()">취소</button>
+      <button class="sh-ok" onclick="confirmAddCourse()">다음 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- 설정 시트 (Cloudinary 연동) -->
+<div class="sheet-back" id="settingsSheet">
+  <div class="sheet">
+    <h2>⚙️ 설정</h2>
+
+    <div class="settings-box">
+      <div class="st-title">📸 클라우드 사진 저장 (Cloudinary)</div>
+      <div class="st-desc">
+        사진을 클라우드에 올려서 폰/앱 저장공간을 아낄 수 있어요.<br>
+        <span style="color:#4a9e3f">cloudinary.com</span> 무료 가입 후 아래 정보를 입력하세요.
+        미입력 시에는 사진이 기기에 저장됩니다 (용량 차지).
+      </div>
+      <div class="st-steps">
+        1. cloudinary.com 가입 (무료 25GB)<br>
+        2. Settings → Upload → Upload Presets<br>
+        3. Add preset → Signing Mode: <b style="color:#facc15">Unsigned</b><br>
+        4. Cloud Name / Preset name을 아래에 입력
+      </div>
+    </div>
+
+    <div class="field-label">Cloud Name</div>
+    <input class="field-input" id="cldCloudInput" placeholder="예: dxxxxxxxx">
+
+    <div class="field-label">Upload Preset</div>
+    <input class="field-input" id="cldPresetInput" placeholder="예: golf_unsigned">
+
+    <div class="field-label" style="margin-top:4px">업로드 시 최대 이미지 크기(px, 긴 변 기준)</div>
+    <input class="field-input" id="cldMaxDimInput" placeholder="기본 1920" inputmode="numeric">
+
+    <div class="sheet-actions">
+      <button class="sh-cancel" onclick="closeSettings()">닫기</button>
+      <button class="sh-ok" onclick="saveSettings()">저장</button>
+    </div>
+    <div class="cld-status-txt" id="cldStatusTxt"></div>
+  </div>
+</div>
+
+<script>
+  let data = JSON.parse(localStorage.getItem('yb3') || '[]');
+  // data = [ { name, photos:[ url(dataURL 또는 Cloudinary URL), ... ] }, ... ]
+  let curIdx = null;
+
+  function save() { localStorage.setItem('yb3', JSON.stringify(data)); }
+
+  // ── 목록 렌더 ──
+  function renderList() {
+    const list  = document.getElementById('courseList');
+    const empty = document.getElementById('emptyMsg');
+    if (!data.length) { list.innerHTML=''; list.appendChild(empty); empty.style.display='block'; return; }
+    empty.style.display = 'none';
+    list.innerHTML = data.map((c,i) => {
+      const thumb = c.photos.length
+        ? `<img class="course-thumb" src="${c.photos[0]}">`
+        : `<div class="course-thumb-empty">⛳</div>`;
+      return `
+        <div class="course-item" onclick="openViewer(${i})">
+          ${thumb}
+          <div class="course-info">
+            <div class="course-name">${c.name}</div>
+            <div class="course-count">${c.photos.length}장</div>
+          </div>
+          <div class="course-arrow">›</div>
+        </div>`;
+    }).join('');
+  }
+
+  // ── 골프장 추가 ──
+  function openAddCourse() {
+    document.getElementById('addSheet').classList.add('open');
+    setTimeout(() => document.getElementById('courseNameInput').focus(), 200);
+  }
+  function closeAddCourse() {
+    document.getElementById('addSheet').classList.remove('open');
+    document.getElementById('courseNameInput').value = '';
+  }
+  function confirmAddCourse() {
+    const name = document.getElementById('courseNameInput').value.trim();
+    if (!name) { alert('이름을 입력해주세요'); return; }
+    data.push({ name, photos: [] });
+    save();
+    curIdx = data.length - 1;
+    closeAddCourse();
+    renderList();
+    openViewer(curIdx);
+  }
+  document.getElementById('courseNameInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') confirmAddCourse();
+  });
+
+  // ── 뷰어 ──
+  function openViewer(i) {
+    curIdx = i;
+    document.getElementById('viewerName').textContent = data[i].name;
+    renderViewer();
+    document.getElementById('viewer').classList.add('open');
+  }
+  function closeViewer() {
+    document.getElementById('viewer').classList.remove('open');
+    renderList();
+  }
+  function deleteCourse() {
+    if (!confirm(`"${data[curIdx].name}"을 삭제할까요?`)) return;
+    data.splice(curIdx, 1);
+    save();
+    closeViewer();
+  }
+
+  function renderViewer() {
+    const scroll = document.getElementById('viewerScroll');
+    const c = data[curIdx];
+    if (!c.photos.length) {
+      scroll.innerHTML = `
+        <div class="viewer-empty">
+          <div class="icon">📸</div>
+          <p>사진 추가 버튼으로<br>야디지 사진을 올려보세요</p>
+        </div>`;
+      return;
+    }
+    scroll.innerHTML = c.photos.map((p,i) => `
+      <div class="photo-block">
+        <img src="${p}" draggable="false">
+        <button class="photo-del" onclick="deletePhoto(${i})">✕ 삭제</button>
+      </div>`
+    ).join('');
+  }
+
+  function deletePhoto(i) {
+    if (!confirm('이 사진을 삭제할까요?')) return;
+    data[curIdx].photos.splice(i, 1);
+    save();
+    renderViewer();
+    renderList();
+  }
+
+  // ── 설정 (Cloudinary) ──
+  function getCldConfig() {
+    return {
+      cloud:  localStorage.getItem('cld_cloud')  || '',
+      preset: localStorage.getItem('cld_preset') || '',
+      maxDim: parseInt(localStorage.getItem('cld_maxdim') || '1920', 10)
+    };
+  }
+  function openSettings() {
+    const { cloud, preset, maxDim } = getCldConfig();
+    document.getElementById('cldCloudInput').value = cloud;
+    document.getElementById('cldPresetInput').value = preset;
+    document.getElementById('cldMaxDimInput').value = maxDim;
+    refreshCldStatus();
+    document.getElementById('settingsSheet').classList.add('open');
+  }
+  function closeSettings() {
+    document.getElementById('settingsSheet').classList.remove('open');
+  }
+  function saveSettings() {
+    const cloud  = document.getElementById('cldCloudInput').value.trim();
+    const preset = document.getElementById('cldPresetInput').value.trim();
+    let maxDim   = parseInt(document.getElementById('cldMaxDimInput').value.trim(), 10);
+    if (!maxDim || maxDim < 400) maxDim = 1920;
+    localStorage.setItem('cld_cloud', cloud);
+    localStorage.setItem('cld_preset', preset);
+    localStorage.setItem('cld_maxdim', String(maxDim));
+    refreshCldStatus();
+  }
+  function refreshCldStatus() {
+    const { cloud, preset } = getCldConfig();
+    const el = document.getElementById('cldStatusTxt');
+    if (cloud && preset) {
+      el.textContent = '✅ 클라우드 저장 연결됨 — 사진이 압축되어 Cloudinary에 저장됩니다';
+      el.classList.add('ok');
+    } else {
+      el.textContent = '⚠️ 미설정 — 사진이 압축된 상태로 기기(로컬)에 저장됩니다';
+      el.classList.remove('ok');
+    }
+  }
+
+  // ── 이미지 압축 (캔버스 리사이즈 + JPEG 재인코딩) ──
+  function compressImage(file, maxDim, quality) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('파일을 읽지 못했습니다'));
+      reader.onload = ev => {
+        const img = new Image();
+        img.onerror = () => reject(new Error('이미지를 열지 못했습니다'));
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            if (width >= height) { height = Math.round(height * maxDim / width); width = maxDim; }
+            else { width = Math.round(width * maxDim / height); height = maxDim; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob(blob => {
+            if (!blob) { reject(new Error('압축 실패')); return; }
+            resolve(blob);
+          }, 'image/jpeg', quality);
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function blobToDataURL(blob) {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = () => reject(new Error('변환 실패'));
+      r.readAsDataURL(blob);
+    });
+  }
+
+  async function uploadToCloudinary(blob) {
+    const { cloud, preset } = getCldConfig();
+    const url = `https://api.cloudinary.com/v1_1/${cloud}/image/upload`;
+    const fd = new FormData();
+    fd.append('file', blob, 'yardage.jpg');
+    fd.append('upload_preset', preset);
+    fd.append('folder', 'yardage-book');
+    const res = await fetch(url, { method: 'POST', body: fd });
+    const json = await res.json();
+    if (json.error) throw new Error(json.error.message);
+    return json.secure_url;
+  }
+
+  // ── 사진 업로드 (압축 → Cloudinary 업로드, 미설정 시 로컬 압축본 저장) ──
+  function triggerUpload() {
+    const inp = document.getElementById('fileInput');
+    inp.value = '';
+    inp.click();
+  }
+
+  function setUploadStatus(text) {
+    const el = document.getElementById('uploadStatus');
+    if (!text) { el.classList.remove('show'); el.textContent = ''; return; }
+    el.textContent = text;
+    el.classList.add('show');
+  }
+
+  async function onFilesSelected(inp) {
+    const files = Array.from(inp.files);
+    if (!files.length) return;
+
+    const { cloud, preset, maxDim } = getCldConfig();
+    const useCloud = !!(cloud && preset);
+    const uploadBtn = document.getElementById('vhUploadBtn');
+    uploadBtn.disabled = true;
+
+    let done = 0;
+    let cloudFailCount = 0;
+    setUploadStatus(`사진 처리 중... (0/${files.length})`);
+
+    for (const file of files) {
+      try {
+        // 1) 리사이즈 + JPEG 압축 (용량을 크게 줄임)
+        const blob = await compressImage(file, maxDim, 0.8);
+
+        // 2) Cloudinary 설정 있으면 업로드, 없으면 압축본을 로컬(base64)로 저장
+        let url;
+        if (useCloud) {
+          try {
+            url = await uploadToCloudinary(blob);
+          } catch (err) {
+            cloudFailCount++;
+            url = await blobToDataURL(blob); // 실패 시 압축본으로 로컬 폴백
+          }
+        } else {
+          url = await blobToDataURL(blob);
+        }
+        data[curIdx].photos.push(url);
+      } catch (err) {
+        console.error(err);
+      }
+      done++;
+      setUploadStatus(`사진 처리 중... (${done}/${files.length})`);
+    }
+
+    save();
+    renderViewer();
+    renderList();
+    uploadBtn.disabled = false;
+
+    if (cloudFailCount > 0) {
+      setUploadStatus(`⚠️ ${cloudFailCount}장 클라우드 업로드 실패 → 기기에 저장됨`);
+      setTimeout(() => setUploadStatus(''), 3000);
+    } else {
+      setUploadStatus('');
+    }
+
+    const scroll = document.getElementById('viewerScroll');
+    setTimeout(() => scroll.scrollTo({ top: scroll.scrollHeight, behavior:'smooth' }), 100);
+  }
+
+  // ── 초기화 ──
+  renderList();
+</script>
+</body>
+</html>
